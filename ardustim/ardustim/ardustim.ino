@@ -45,6 +45,8 @@ volatile uint8_t prescaler_bits = 0;
 volatile uint8_t last_prescaler_bits = 0;
 volatile uint16_t new_OCR1A = 5000; /* sane default */
 volatile uint16_t edge_counter = 0;
+/* Wheel halted — TIMER1's compare interrupt is masked off, so no edges are emitted at all. */
+volatile bool halted = false;
 volatile uint32_t cycleStartTime = micros();
 volatile uint32_t cycleDuration = 0;
 uint32_t sweep_time_counter = 0;
@@ -289,6 +291,10 @@ void loop()
    * interrupt handlers or callbacks from SerialUI.
    */
   if(Serial.available() > 0) { commandParser(); }
+
+  /* Halted: report a stopped wheel and drive nothing. This must sit AFTER commandParser(), or the
+   * resume command could never be read. */
+  if (halted) { currentStatus.rpm = 0; return; }
 
   if(config.mode == POT_RPM)
   {

@@ -133,6 +133,36 @@ void commandParser()
       //sweep_high_rpm = 4000;
       break;
 
+    case 'F': //Set a FIXED rpm — software override of the pot. Switches mode to FIXED_RPM so loop()
+      // drives config.fixed_rpm directly, letting a bench host hold a steady RPM without the pot.
+      // The host sends the 16-bit RPM LITTLE-endian — verified on the bench as b'F'+pack('<H', rpm).
+      config.mode = FIXED_RPM;
+      while(Serial.available() < 2) {} //Wait for the 2 RPM bytes
+      config.fixed_rpm = word(Serial.read(), Serial.read());
+      break;
+
+    case 'H': //HALT the wheel — stop emitting edges entirely (a stopped engine, not a slow one).
+      // 'F' cannot express this: fixed_rpm is constrained to a 100 rpm floor, so the wheel keeps
+      // turning. Masking TIMER1's compare interrupt stops the pattern generator dead and leaves the
+      // port at its idle level, so an ECU sees no teeth at all.
+      halted = true;
+      TIMSK1 &= ~(1 << OCIE1A);
+      PORTB = output_invert_mask;        // idle level, honouring the invert mask
+      currentStatus.rpm = 0;
+      Serial.println(F("HALTED"));
+      break;
+
+    case 'h': //Resume from halt, restarting the pattern at edge 0.
+      if (halted)
+      {
+        edge_counter = 0;
+        TCNT1 = 0;
+        halted = false;
+        TIMSK1 |= (1 << OCIE1A);
+      }
+      Serial.println(F("RUNNING"));
+      break;
+
     case 's': //Save the current config
       saveConfig();
       break;

@@ -65,6 +65,14 @@ struct status
 };
 extern struct status currentStatus;
 
+// HALT: the wheel stopped, as distinct from turning slowly. config.fixed_rpm is constrained to a
+// floor of 100 rpm (storage.ino), so 'F' with 0 cannot stop the pattern — it just runs the wheel at
+// the floor. Diagnosing an ECU's behaviour with NO trigger at all (sync loss, stale capture, cold
+// start before the first tooth) needs the edges to actually cease, so this gates the generator ISR.
+extern volatile bool halted;
+extern volatile uint8_t  output_invert_mask;
+extern volatile uint16_t edge_counter;
+
 /* Tie things wheel related into one nicer structure ... */
 typedef struct _wheels wheels;
 struct _wheels {
