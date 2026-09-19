@@ -52,6 +52,17 @@ void serialSetup()
   cmdPending = false;
 }
 
+// Wait briefly for one more byte. Returns false if none arrives, so a stray command letter cannot
+// wedge the parser waiting for an argument that is never coming.
+static bool await_byte()
+{
+  for (uint16_t i = 0; i < 2000; i++) {      // ~5 ms at 16 MHz
+    if (Serial.available() > 0) return true;
+    delayMicroseconds(2);
+  }
+  return false;
+}
+
 void commandParser()
 {
   char buf[80];
@@ -71,6 +82,7 @@ void commandParser()
       {
         *((uint8_t *)pnt_Config + x) = Serial.read(); //Read each byte into the config table
       }
+      saveConfig();
       break;
 
     case 'C': //Send the current config
@@ -128,6 +140,7 @@ void commandParser()
       config.sweep_low_rpm = word(Serial.read(), Serial.read());
       config.sweep_high_rpm = word(Serial.read(), Serial.read());
       config.sweep_interval = word(Serial.read(), Serial.read());
+      saveConfig();
 
       //sweep_low_rpm = 100;
       //sweep_high_rpm = 4000;
@@ -139,12 +152,29 @@ void commandParser()
       config.mode = FIXED_RPM;
       while(Serial.available() < 2) {} //Wait for the 2 RPM bytes
       config.fixed_rpm = word(Serial.read(), Serial.read());
+      // PERSIST IT. Opening this port raises DTR, DTR is capacitor-coupled to RESET, so the board
+      // reboots whenever any host on any machine connects, meant to or not. That cannot be fixed from
+      // the host side, so the board stops LOSING anything to a reboot instead: it comes back up on
+      // whatever wheel and rpm it was last told. saveConfig() is EEPROM.update throughout, so
+      // unchanged bytes are never rewritten and saving on every command costs no wear.
+      saveConfig();
       break;
 
+    // 'H'/'h' take a MAGIC second byte. This protocol has no framing and every other command with
+    // arguments ('F' + 2 rpm bytes, 'S' + 1 wheel byte) consumes them positionally, so one dropped
+    // or extra byte shifts an ARGUMENT into the command slot. Before halt existed a stray byte hit
+    // default: and did nothing; a bare 'H' would silently stop the pattern generator instead — and
+    // 0x48 is 'H', which is the high byte of any rpm from 18432 to 18687, a range this bench sweeps
+    // through. Requiring 0x5A makes a lone stray byte harmless again.
     case 'H': //HALT the wheel — stop emitting edges entirely (a stopped engine, not a slow one).
       // 'F' cannot express this: fixed_rpm is constrained to a 100 rpm floor, so the wheel keeps
       // turning. Masking TIMER1's compare interrupt stops the pattern generator dead and leaves the
       // port at its idle level, so an ECU sees no teeth at all.
+      // BOUNDED wait, not `while(Serial.available()<1){}`. A blocking wait turns a stray 0x48 with
+      // nothing behind it into a permanent lockup of the command parser — worse than the silent
+      // halt it was added to prevent. Give the magic byte a few ms to arrive, then give up.
+      if (!await_byte()) break;
+      if (Serial.read() != 0x5A) break;          // not a real halt — a stray byte
       halted = true;
       TIMSK1 &= ~(1 << OCIE1A);
       PORTB = output_invert_mask;        // idle level, honouring the invert mask
@@ -153,6 +183,8 @@ void commandParser()
       break;
 
     case 'h': //Resume from halt, restarting the pattern at edge 0.
+      if (!await_byte()) break;
+      if (Serial.read() != 0x5A) break;
       if (halted)
       {
         edge_counter = 0;
@@ -174,6 +206,7 @@ void commandParser()
       {
         config.wheel = tmp_wheel;
         display_new_wheel();
+        saveConfig();
       }
       break;
 
@@ -181,6 +214,7 @@ void commandParser()
       select_next_wheel_cb();
       strcpy_P(buf,Wheels[config.wheel].decoder_name);
       Serial.println(buf);
+      saveConfig();
       break;
 
     default:

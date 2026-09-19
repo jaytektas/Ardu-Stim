@@ -59,71 +59,80 @@ uint8_t bitshift = 0;
 
 
 wheels Wheels[MAX_WHEELS] = {
-   /* Pointer to friendly name string, pointer to edge array, RPM Scaler, Number of edges in the array, whether the number of edges covers 360 or 720 degrees */
-  { dizzy_four_cylinder_friendly_name, dizzy_four_cylinder, 0.03333, 4, 360 },
-  { dizzy_six_cylinder_friendly_name, dizzy_six_cylinder, 0.05, 6, 360 },
-  { dizzy_eight_cylinder_friendly_name, dizzy_eight_cylinder, 0.06667, 8, 360 },
-  { sixty_minus_two_friendly_name, sixty_minus_two, 1.0, 120, 360 },
-  { sixty_minus_two_with_cam_friendly_name, sixty_minus_two_with_cam, 1.0, 240, 720 },
-  { sixty_minus_two_with_halfmoon_cam_friendly_name, sixty_minus_two_with_halfmoon_cam, 1.0, 240, 720 },
-  { thirty_six_minus_one_friendly_name, thirty_six_minus_one, 0.6, 72, 360 },
-  { twenty_four_minus_one_friendly_name, twenty_four_minus_one, 0.5, 48, 360 },
-  { four_minus_one_with_cam_friendly_name, four_minus_one_with_cam, 0.06667, 16, 720 },
-  { eight_minus_one_friendly_name, eight_minus_one, 0.13333, 16, 360 },
-  { six_minus_one_with_cam_friendly_name, six_minus_one_with_cam, 0.15, 36, 720 },
-  { twelve_minus_one_with_cam_friendly_name, twelve_minus_one_with_cam, 0.6, 144, 720 },
-  { fourty_minus_one_friendly_name, fourty_minus_one, 0.66667, 80, 360 },
-  { dizzy_four_trigger_return_friendly_name, dizzy_four_trigger_return, 0.15, 9, 720 },
-  { oddfire_vr_friendly_name, oddfire_vr, 0.2, 24, 360 },
-  { optispark_lt1_friendly_name, optispark_lt1, 3.0, 720, 720 },
-  { twelve_minus_three_friendly_name, twelve_minus_three, 0.4, 48, 360 },
-  { thirty_six_minus_two_two_two_friendly_name, thirty_six_minus_two_two_two, 0.6, 72, 360 },
-  { thirty_six_minus_two_two_two_h6_friendly_name, thirty_six_minus_two_two_two_h6, 0.6, 72, 360 },
-  { thirty_six_minus_two_two_two_with_cam_friendly_name, thirty_six_minus_two_two_two_with_cam, 0.6, 144, 720 },
-  { fourty_two_hundred_wheel_friendly_name, fourty_two_hundred_wheel, 0.6, 72, 360 },
-  { thirty_six_minus_one_with_cam_fe3_friendly_name, thirty_six_minus_one_with_cam_fe3, 0.6, 144, 720 },
-  { six_g_seventy_two_with_cam_friendly_name, six_g_seventy_two_with_cam, 0.6, 144, 720 },
-  { buell_oddfire_cam_friendly_name, buell_oddfire_cam, 0.33333, 80, 720 },
-  { gm_ls1_crank_and_cam_friendly_name, gm_ls1_crank_and_cam, 6.0, 720, 720 },
-  { gm_ls_58X_crank_and_4x_cam_friendly_name, GM_LS_58X_crank_and_4x_cam, 1.0, 240, 720},
-  { lotus_thirty_six_minus_one_one_one_one_friendly_name, lotus_thirty_six_minus_one_one_one_one, 0.6, 72, 360 },
-  { honda_rc51_with_cam_friendly_name, honda_rc51_with_cam, 0.2, 48, 720 },
-  { thirty_six_minus_one_with_second_trigger_friendly_name, thirty_six_minus_one_with_second_trigger, 0.6, 144, 720 },
-  { chrysler_ngc_thirty_six_plus_two_minus_two_with_ngc4_cam_friendly_name, chrysler_ngc_thirty_six_plus_two_minus_two_with_ngc4_cam, 3.0, 720, 720 },
-  { chrysler_ngc_thirty_six_minus_two_plus_two_with_ngc6_cam_friendly_name, chrysler_ngc_thirty_six_minus_two_plus_two_with_ngc6_cam, 3.0, 720, 720 },
-  { chrysler_ngc_thirty_six_minus_two_plus_two_with_ngc8_cam_friendly_name, chrysler_ngc_thirty_six_minus_two_plus_two_with_ngc8_cam, 3.0, 720, 720 },
-  { weber_iaw_with_cam_friendly_name, weber_iaw_with_cam, 1.2, 144, 720 },
-  { fiat_one_point_eight_sixteen_valve_with_cam_friendly_name, fiat_one_point_eight_sixteen_valve_with_cam, 3.0, 720, 720 },
-  { three_sixty_nissan_cas_friendly_name, three_sixty_nissan_cas, 3.0, 720, 720 },
-  { twenty_four_minus_two_with_second_trigger_friendly_name, twenty_four_minus_two_with_second_trigger, 0.3, 72, 720 },
-  { yamaha_eight_tooth_with_cam_friendly_name, yamaha_eight_tooth_with_cam, 0.26667, 64, 720 },
-  { gm_four_tooth_with_cam_friendly_name, gm_four_tooth_with_cam, 0.06666, 8, 720 },
-  { gm_six_tooth_with_cam_friendly_name, gm_six_tooth_with_cam, 0.1, 12, 720 },
-  { gm_eight_tooth_with_cam_friendly_name, gm_eight_tooth_with_cam, 0.13333, 16, 720 },
-  { volvo_d12acd_with_cam_friendly_name, volvo_d12acd_with_cam, 4.0, 480, 720 },
-  { mazda_thirty_six_minus_two_two_two_with_six_tooth_cam_friendly_name, mazda_thirty_six_minus_two_two_two_with_six_tooth_cam, 1.5, 360, 720 },
-  { mitsubishi_4g63_4_2_friendly_name, mitsubishi_4g63_4_2, 0.6, 144, 720 },
-  { audi_135_with_cam_friendly_name, audi_135_with_cam, 1.5, 1080, 720 },
-  { honda_d17_no_cam_friendly_name, honda_d17_no_cam, 0.6, 144, 720 },
-  { mazda_323_au_friendly_name, mazda_323_au, 1, 30, 720 },
-  { daihatsu_3cyl_friendly_name, daihatsu_3cyl, 0.8, 144, 360 },
-  { miata_9905_friendly_name, miata_9905, 0.6, 144, 720 },
-  { twelve_with_cam_friendly_name, twelve_with_cam, 0.6, 144, 720 },
-  { twenty_four_with_cam_friendly_name, twenty_four_with_cam, 0.6, 144, 720 },
-  { subaru_six_seven_name_friendly_name, subaru_six_seven, 3.0, 720, 720 },
-  { gm_seven_x_friendly_name, gm_seven_x, 1.502, 180, 720 },
-  { four_twenty_a_friendly_name, four_twenty_a, 0.6, 144, 720 },
-  { ford_st170_friendly_name, ford_st170, 3.0, 720, 720 },
-  { mitsubishi_3A92_friendly_name, mitsubishi_3A92, 0.6, 144, 720 },
-  { Toyota_4AGE_CAS_friendly_name, toyota_4AGE_CAS, 0.333, 144, 720 },
-  { Toyota_4AGZE_friendly_name, toyota_4AGZE, 0.333, 144, 720 },
-  { Suzuki_DRZ400_friendly_name, suzuki_DRZ400,0.6, 72, 360},
-  { Jeep_2000_4cyl_friendly_name, jeep_2000_4cyl, 1.5, 360, 720},
-  { Jeep_2000_6cyl_friendly_name, jeep_2000_6cyl, 1.5, 360, 720 },
-  { BMW_N20_friendly_name, bmw_n20, 1.0, 240, 720},
-  { VIPER9602_friendly_name, viper9602wheel, 1.0, 240, 720},
-  { thirty_six_minus_two_with_second_trigger_friendly_name, thirty_six_minus_two_with_second_trigger, 0.6, 144, 720 },
-  { GM_40_Tooth_Trans_OSS_friendly_name, GM40toothOSS, 1.0, 80, 360 },
+   /* Pointer to friendly name string, pointer to edge array, number of entries in that array,
+    * and whether those entries cover 360 or 720 crank degrees.
+    *
+    * THERE IS NO RPM SCALER HERE ANY MORE. It was a third number, hand-computed from the two that
+    * follow, and fourteen rows disagreed with their own inputs — so it is now derived where it is
+    * used (reset_new_OCR1A) and cannot drift. A row states what the wheel IS; the clock rate follows. */
+  { dizzy_four_cylinder_friendly_name, dizzy_four_cylinder, 4, 360 },
+  { dizzy_six_cylinder_friendly_name, dizzy_six_cylinder, 6, 360 },
+  { dizzy_eight_cylinder_friendly_name, dizzy_eight_cylinder, 8, 360 },
+  { sixty_minus_two_friendly_name, sixty_minus_two, 120, 360 },
+  { sixty_minus_two_with_cam_friendly_name, sixty_minus_two_with_cam, 240, 720 },
+  { sixty_minus_two_with_halfmoon_cam_friendly_name, sixty_minus_two_with_halfmoon_cam, 240, 720 },
+  { thirty_six_minus_one_friendly_name, thirty_six_minus_one, 72, 360 },
+  /* This row once carried a hand-typed 0.5 where the convention wanted 0.4, so it spun 25% FASTER
+   * than the RPM it reported — found by counting edges on a bench, because the stim's own 'R' will
+   * always agree with whatever you set. That fix corrected one row; thirteen others were wrong the
+   * same way and stayed wrong. The scaler is derived now, so neither can happen again. */
+  { twenty_four_minus_one_friendly_name, twenty_four_minus_one, 48, 360 },
+  { four_minus_one_with_cam_friendly_name, four_minus_one_with_cam, 16, 720 },
+  { eight_minus_one_friendly_name, eight_minus_one, 16, 360 },
+  { six_minus_one_with_cam_friendly_name, six_minus_one_with_cam, 36, 720 },
+  { twelve_minus_one_with_cam_friendly_name, twelve_minus_one_with_cam, 144, 720 },
+  { fourty_minus_one_friendly_name, fourty_minus_one, 80, 360 },
+  { dizzy_four_trigger_return_friendly_name, dizzy_four_trigger_return, 9, 720 },
+  { oddfire_vr_friendly_name, oddfire_vr, 24, 360 },
+  { optispark_lt1_friendly_name, optispark_lt1, 720, 720 },
+  { twelve_minus_three_friendly_name, twelve_minus_three, 48, 360 },
+  { thirty_six_minus_two_two_two_friendly_name, thirty_six_minus_two_two_two, 72, 360 },
+  { thirty_six_minus_two_two_two_h6_friendly_name, thirty_six_minus_two_two_two_h6, 72, 360 },
+  { thirty_six_minus_two_two_two_with_cam_friendly_name, thirty_six_minus_two_two_two_with_cam, 144, 720 },
+  { fourty_two_hundred_wheel_friendly_name, fourty_two_hundred_wheel, 72, 360 },
+  { thirty_six_minus_one_with_cam_fe3_friendly_name, thirty_six_minus_one_with_cam_fe3, 144, 720 },
+  { six_g_seventy_two_with_cam_friendly_name, six_g_seventy_two_with_cam, 144, 720 },
+  { buell_oddfire_cam_friendly_name, buell_oddfire_cam, 80, 720 },
+  { gm_ls1_crank_and_cam_friendly_name, gm_ls1_crank_and_cam, 720, 720 },
+  { gm_ls_58X_crank_and_4x_cam_friendly_name, GM_LS_58X_crank_and_4x_cam, 240, 720 },
+  { lotus_thirty_six_minus_one_one_one_one_friendly_name, lotus_thirty_six_minus_one_one_one_one, 72, 360 },
+  { honda_rc51_with_cam_friendly_name, honda_rc51_with_cam, 48, 720 },
+  { thirty_six_minus_one_with_second_trigger_friendly_name, thirty_six_minus_one_with_second_trigger, 144, 720 },
+  { chrysler_ngc_thirty_six_plus_two_minus_two_with_ngc4_cam_friendly_name, chrysler_ngc_thirty_six_plus_two_minus_two_with_ngc4_cam, 720, 720 },
+  { chrysler_ngc_thirty_six_minus_two_plus_two_with_ngc6_cam_friendly_name, chrysler_ngc_thirty_six_minus_two_plus_two_with_ngc6_cam, 720, 720 },
+  { chrysler_ngc_thirty_six_minus_two_plus_two_with_ngc8_cam_friendly_name, chrysler_ngc_thirty_six_minus_two_plus_two_with_ngc8_cam, 720, 720 },
+  { weber_iaw_with_cam_friendly_name, weber_iaw_with_cam, 144, 720 },
+  { fiat_one_point_eight_sixteen_valve_with_cam_friendly_name, fiat_one_point_eight_sixteen_valve_with_cam, 720, 720 },
+  { three_sixty_nissan_cas_friendly_name, three_sixty_nissan_cas, 720, 720 },
+  { twenty_four_minus_two_with_second_trigger_friendly_name, twenty_four_minus_two_with_second_trigger, 72, 720 },
+  { yamaha_eight_tooth_with_cam_friendly_name, yamaha_eight_tooth_with_cam, 64, 720 },
+  { gm_four_tooth_with_cam_friendly_name, gm_four_tooth_with_cam, 8, 720 },
+  { gm_six_tooth_with_cam_friendly_name, gm_six_tooth_with_cam, 12, 720 },
+  { gm_eight_tooth_with_cam_friendly_name, gm_eight_tooth_with_cam, 16, 720 },
+  { volvo_d12acd_with_cam_friendly_name, volvo_d12acd_with_cam, 480, 720 },
+  { mazda_thirty_six_minus_two_two_two_with_six_tooth_cam_friendly_name, mazda_thirty_six_minus_two_two_two_with_six_tooth_cam, 360, 720 },
+  { mitsubishi_4g63_4_2_friendly_name, mitsubishi_4g63_4_2, 144, 720 },
+  { audi_135_with_cam_friendly_name, audi_135_with_cam, 1080, 720 },
+  { honda_d17_no_cam_friendly_name, honda_d17_no_cam, 144, 720 },
+  { mazda_323_au_friendly_name, mazda_323_au, 30, 720 },
+  { daihatsu_3cyl_friendly_name, daihatsu_3cyl, 144, 360 },
+  { miata_9905_friendly_name, miata_9905, 144, 720 },
+  { twelve_with_cam_friendly_name, twelve_with_cam, 144, 720 },
+  { twenty_four_with_cam_friendly_name, twenty_four_with_cam, 144, 720 },
+  { subaru_six_seven_name_friendly_name, subaru_six_seven, 720, 720 },
+  { gm_seven_x_friendly_name, gm_seven_x, 180, 720 },
+  { four_twenty_a_friendly_name, four_twenty_a, 144, 720 },
+  { ford_st170_friendly_name, ford_st170, 720, 720 },
+  { mitsubishi_3A92_friendly_name, mitsubishi_3A92, 144, 720 },
+  { Toyota_4AGE_CAS_friendly_name, toyota_4AGE_CAS, 144, 720 },
+  { Toyota_4AGZE_friendly_name, toyota_4AGZE, 144, 720 },
+  { Suzuki_DRZ400_friendly_name, suzuki_DRZ400, 72, 360 },
+  { Jeep_2000_4cyl_friendly_name, jeep_2000_4cyl, 360, 720 },
+  { Jeep_2000_6cyl_friendly_name, jeep_2000_6cyl, 360, 720 },
+  { BMW_N20_friendly_name, bmw_n20, 240, 720 },
+  { VIPER9602_friendly_name, viper9602wheel, 240, 720 },
+  { thirty_six_minus_two_with_second_trigger_friendly_name, thirty_six_minus_two_with_second_trigger, 144, 720 },
+  { GM_40_Tooth_Trans_OSS_friendly_name, GM40toothOSS, 80, 360 },
 };
 
 /* Initialization */
@@ -411,7 +420,18 @@ void reset_new_OCR1A(uint32_t new_rpm)
   uint32_t tmp;
   uint8_t bitshift;
   uint8_t tmp_prescaler_bits;
-  tmp = (uint32_t)(8000000.0/(Wheels[config.wheel].rpm_scaler * (float)(new_rpm < 10 ? 10:new_rpm)));
+  // THE SCALER IS DERIVED, NOT STORED. It is (entries per 360 deg)/120, and both of its inputs sit
+  // in the same row — so keeping it as a third, hand-typed number meant a row could disagree with
+  // itself, and fourteen of the sixty-four did. Six of them by exactly 2x, all cycle wheels whose
+  // scaler was computed from entries per CYCLE instead of per REVOLUTION; the rest by 0.33x, 0.55x,
+  // 1.5x, 4x and 8x. Nothing caught it because the stim reports the rpm you ASKED for ('R' prints
+  // currentStatus.rpm, the setpoint) and never counts its own output, so the instrument agreed with
+  // whatever you typed while emitting something else. Anything ever calibrated against one of those
+  // wheels was calibrated against a lie — see the note on the 24-1 wheel, which is this same bug
+  // found the hard way and fixed one row at a time.
+  const float rpm_scaler = (float)Wheels[config.wheel].wheel_max_edges * 3.0f
+                         / (float)Wheels[config.wheel].wheel_degrees;
+  tmp = (uint32_t)(8000000.0/(rpm_scaler * (float)(new_rpm < 10 ? 10:new_rpm)));
   //tmp = (uint32_t)(8000000/(Wheels[config.wheel].rpm_scaler * (new_rpm < 10 ? 10:new_rpm)));
   //uint64_t x = 800000000000ULL;
 
