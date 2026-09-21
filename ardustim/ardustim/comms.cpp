@@ -129,6 +129,33 @@ void commandParser()
       Serial.println(Wheels[config.wheel].wheel_degrees);
       break;
 
+    case 'V': //Set the CRANK CURVE: amplitude (percent), compressions per revolution x2, and the
+      // speed above which the wheel runs steady again. Amplitude 0 turns it off, so one command both
+      // arms and disarms it and there is no separate enable to get out of step with.
+      //
+      // FIVE BYTES, and the last two are the rpm ceiling LITTLE-endian, matching 'F'. Like every
+      // other command here the arguments are consumed positionally, so they are read together or not
+      // at all — see the note on 'H' for what a single stray byte does to a protocol with no framing.
+      while(Serial.available() < 4) {}
+      config.curveAmplitude = Serial.read();
+      config.curveHalves    = Serial.read();
+      config.curveMaxRpm    = word(Serial.read(), Serial.read());
+      if(config.curveAmplitude > 90) { config.curveAmplitude = 90; }
+      if(config.curveHalves < 1 || config.curveHalves > 16) { config.curveHalves = 4; }
+      config.crankCurve = (config.curveAmplitude > 0);
+      // Persisted for the same reason the wheel and the rpm are: opening this port resets the board,
+      // so anything not in EEPROM is lost the moment the next host connects.
+      saveConfig();
+      break;
+
+    case 'v': //Report the crank curve, so a bench script can CHECK what it set rather than assume it
+      Serial.print(config.curveAmplitude);
+      Serial.print(",");
+      Serial.print(config.curveHalves);
+      Serial.print(",");
+      Serial.println(config.curveMaxRpm);
+      break;
+
     case 'R': //Send the current RPM
       Serial.println(currentStatus.rpm);
       break;

@@ -29,7 +29,7 @@ void reset_new_OCR1A(uint32_t);
 uint8_t get_bitshift_from_prescaler(uint8_t *);
 void get_prescaler_bits(uint32_t *, uint8_t *, uint8_t *);
 void setRPM(uint16_t);
-uint16_t calculateCompressionModifier();
+int16_t calculateCurveDelta();
 uint16_t calculateCurrentCrankAngle();
 
 /* Prototypes */

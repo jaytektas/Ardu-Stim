@@ -30,12 +30,6 @@
 #define TMP_RPM_CAP 9000 /* MAX RPM via pot control. Adjusted to 9,000rpm max from 16,384rpm to match the GUI */
 #define EEPROM_LAST_MODE  100
 
-#define COMPRESSION_TYPE_1CYL_4STROKE 0 //Not initiallity supported
-#define COMPRESSION_TYPE_2CYL_4STROKE 1
-#define COMPRESSION_TYPE_3CYL_4STROKE 2 //Not initiallity supported
-#define COMPRESSION_TYPE_4CYL_4STROKE 3
-#define COMPRESSION_TYPE_6CYL_4STROKE 4
-#define COMPRESSION_TYPE_8CYL_4STROKE 5
 
 struct configTable 
 {
@@ -48,19 +42,26 @@ struct configTable
   uint16_t sweep_interval = 1000;
 
   //11
-  bool useCompression = false;
-  uint8_t compressionType = 0;
-  uint16_t compressionRPM = 400;
-  uint16_t compressionOffset = 0;
-  bool compressionDynamic = false;
+  // THE CRANK CURVE. A cranking engine does not turn at a speed — it stalls against each compression
+  // and runs away between them, and a capture taken on a starter has that written all over it. The
+  // stim used to model this as "compression": a fixed amplitude baked into three lookup tables, a
+  // frequency chosen from an enum of 2/4/6/8 cylinders, and a modifier that could only ever SUBTRACT
+  // — so switching it on lowered the mean speed rather than swinging about it, and the wheel no
+  // longer ran at the rpm it was asked for. Amplitude and frequency are both numbers now, and the
+  // curve is symmetric about the mean, so turning it on changes the shape and not the speed.
+  bool     crankCurve   = false;   // off = a perfectly steady wheel, which no real engine is
+  uint8_t  curveHalves  = 4;       // compressions per revolution X2: 3 a triple, 4 a four, 6 a six, 8 an eight
+  uint8_t  curveAmplitude = 0;     // percent of the mean speed, each way. 0 is the same as off
+  uint16_t curveMaxRpm  = 600;     // above this the curve is off: a running engine does not do this
+  uint16_t curveOffset  = 0;       // degrees — where the first compression falls in the turn
 } __attribute__ ((packed));
 extern struct configTable config;
 
 
 struct status 
 {
-  uint16_t base_rpm; //RPM excluding compression modifier
-  uint16_t compressionModifier;
+  uint16_t base_rpm;    // the mean the curve swings about
+  int16_t  curveDelta;  // what the curve is adding or taking off, right now
   uint16_t rpm; //Final RPM
 };
 extern struct status currentStatus;
@@ -83,46 +84,45 @@ struct _wheels {
 };
 
 //A sin wave of amplitude 100 with a complete cycle in 180 degrees (1 entry per degree). 
-const uint8_t sin_100_180[] PROGMEM = 
-{ 
-  0,0,0,0,0,1,1,1,2,2,3,4,4,5,6,7,8,9,10,11,
-  12,13,14,15,17,18,19,21,22,24,25,27,28,30,
-  31,33,35,36,38,40,41,43,45,47,48,50,52,53,
-  55,57,59,60,62,64,65,67,69,70,72,73,75,76,
-  78,79,81,82,83,85,86,87,88,89,90,91,92,93,
-  94,95,96,96,97,98,98,99,99,99,100,100,100,
-  100,100,100,100,100,100,99,99,99,98,98,97,
-  96,96,95,94,93,92,91,90,89,88,87,86,85,83,
-  82,81,79,78,76,75,73,72,70,69,67,65,64,62,
-  60,59,57,55,53,52,50,48,47,45,43,41,40,38,
-  36,35,33,31,30,28,27,25,24,22,21,19,18,17,
-  15,14,13,12,11,10,9,8,7,6,5,4,4,3,2,2,1,1,
-  1,0,0,0,0
+// ONE SIGNED SINE, over a full turn of the curve, in 256 steps of 1/127.
+//
+// It replaces three unsigned tables — one per cylinder count — that between them could only pull the
+// speed DOWN, by an amount the caller could not choose. A compression slows the engine and the
+// expansion after it speeds the engine up; a model with only the first half of that is not a slower
+// engine, it is a different engine.
+// PUTTING BACK THE REVOLUTIONS THE SWING COSTS.
+//
+// Swinging the instantaneous speed evenly either side of the mean does NOT leave the mean speed
+// alone: the engine spends longer at the slow end than at the fast one, so it completes fewer
+// revolutions per minute. The shortfall is exactly sqrt(1 - amplitude^2) — ask for 300 rpm at 45%
+// and the wheel turns at 268, which is what the fitter measured off the bench and what sent this
+// back to be corrected. A stim that reports the rpm you typed while emitting another is the same
+// fault as the hand-typed rpm_scaler, and it is worth no more trust here than it was there.
+//
+// So the mean is pre-divided by that factor. In 1/256ths, by amplitude in steps of 5%.
+const uint16_t crank_curve_mean_fix[19] PROGMEM =
+{
+  256, 256, 257, 259, 261, 264, 268, 273, 279, 287, 296, 307, 320, 337, 358, 387, 427, 486, 587
 };
 
-//A sin wave of amplitude 100 with a complete cycle in 90 degrees (1 entry per degree). 
-const uint8_t sin_100_90[] PROGMEM = 
-{ 
-  0,0,0,1,2,3,4,6,8,10,12,14,17,19,22,25,28,
-  31,35,38,41,45,48,52,55,59,62,65,69,72,75,
-  78,81,83,86,88,90,92,94,96,97,98,99,100,100,
-  100,100,100,99,98,97,96,94,92,90,88,86,83,81,
-  78,75,72,69,65,62,59,55,52,48,45,41,38,35,31,
-  28,25,22,19,17,14,12,10,8,6,4,3,2,1,0,0
-};
-
-//A sin wave of amplitude 100 with a complete cycle in 120 degrees
-
-const uint8_t sin_100_120[] PROGMEM = 
-{ 
-  0,0,0,1,1,2,2,3,4,5,7,8,10,11,13,15,17,19,
-  21,23,25,27,30,32,35,37,40,42,45,47,50,53,
-  55,58,60,63,65,68,70,73,75,77,79,81,83,85,
-  87,89,90,92,93,95,96,97,98,98,99,99,100,100,
-  100,100,100,99,99,98,98,97,96,95,93,92,90,89,
-  87,85,83,81,79,77,75,73,70,68,65,63,60,58,55,
-  53,50,47,45,42,40,37,35,32,30,27,25,23,21,19,
-  17,15,13,11,10,8,7,5,4,3,2,2,1,1,0,0
+const int8_t crank_curve_sine[256] PROGMEM =
+{
+     0,    3,    6,    9,   12,   16,   19,   22,   25,   28,   31,   34,   37,   40,   43,   46,
+    49,   51,   54,   57,   60,   63,   65,   68,   71,   73,   76,   78,   81,   83,   85,   88,
+    90,   92,   94,   96,   98,  100,  102,  104,  106,  107,  109,  111,  112,  113,  115,  116,
+   117,  118,  120,  121,  122,  122,  123,  124,  125,  125,  126,  126,  126,  127,  127,  127,
+   127,  127,  127,  127,  126,  126,  126,  125,  125,  124,  123,  122,  122,  121,  120,  118,
+   117,  116,  115,  113,  112,  111,  109,  107,  106,  104,  102,  100,   98,   96,   94,   92,
+    90,   88,   85,   83,   81,   78,   76,   73,   71,   68,   65,   63,   60,   57,   54,   51,
+    49,   46,   43,   40,   37,   34,   31,   28,   25,   22,   19,   16,   12,    9,    6,    3,
+     0,   -3,   -6,   -9,  -12,  -16,  -19,  -22,  -25,  -28,  -31,  -34,  -37,  -40,  -43,  -46,
+   -49,  -51,  -54,  -57,  -60,  -63,  -65,  -68,  -71,  -73,  -76,  -78,  -81,  -83,  -85,  -88,
+   -90,  -92,  -94,  -96,  -98, -100, -102, -104, -106, -107, -109, -111, -112, -113, -115, -116,
+  -117, -118, -120, -121, -122, -122, -123, -124, -125, -125, -126, -126, -126, -127, -127, -127,
+  -127, -127, -127, -127, -126, -126, -126, -125, -125, -124, -123, -122, -122, -121, -120, -118,
+  -117, -116, -115, -113, -112, -111, -109, -107, -106, -104, -102, -100,  -98,  -96,  -94,  -92,
+   -90,  -88,  -85,  -83,  -81,  -78,  -76,  -73,  -71,  -68,  -65,  -63,  -60,  -57,  -54,  -51,
+   -49,  -46,  -43,  -40,  -37,  -34,  -31,  -28,  -25,  -22,  -19,  -16,  -12,   -9,   -6,   -3,
 };
 
 #endif

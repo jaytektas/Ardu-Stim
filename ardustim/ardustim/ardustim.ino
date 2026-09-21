@@ -339,69 +339,65 @@ void loop()
   }
   currentStatus.base_rpm = tmp_rpm;
 
-  currentStatus.compressionModifier = calculateCompressionModifier();
-  if(currentStatus.compressionModifier >= currentStatus.base_rpm ) { currentStatus.compressionModifier = 0; }
-
-  setRPM( (currentStatus.base_rpm - currentStatus.compressionModifier) );
+  /* The curve rides ON the mean, so the wheel still averages the rpm it was asked for. Clamped at a
+   * tenth of it: an amplitude of 100% would otherwise ask for a standstill once per compression, and
+   * a standstill has no tooth period to compute. */
+  currentStatus.curveDelta = calculateCurveDelta();
+  int32_t want = (int32_t)currentStatus.base_rpm + currentStatus.curveDelta;
+  const int32_t floorRpm = (int32_t)currentStatus.base_rpm / 10;
+  if (want < floorRpm) { want = floorRpm; }
+  setRPM((uint16_t)want);
 }
 
-uint16_t calculateCompressionModifier()
+// WHAT THE CURVE IS DOING AT THIS INSTANT, as an rpm to add to the mean. Signed: a compression takes
+// speed off and the expansion after it puts speed back on, and a model with only the first half of
+// that is not a slower engine, it is a different engine — the old one subtracted only, so switching
+// it on dropped the mean and the wheel stopped running at the rpm it had been asked for.
+int16_t calculateCurveDelta()
 {
-  if( (currentStatus.base_rpm > config.compressionRPM) || (config.useCompression != true) ) { return 0; }
-  //if( currentStatus.base_rpm > 400 ) { return 0;}
+  if (!config.crankCurve || config.curveAmplitude == 0) { return 0; }
+  if (currentStatus.base_rpm > config.curveMaxRpm)      { return 0; }
+  if (config.curveHalves == 0)                          { return 0; }
 
-  uint16_t crankAngle = calculateCurrentCrankAngle();
-  uint16_t modAngle = crankAngle;
+  /* Degrees of crank per compression: 4 halves is one every 180, a six is one every 120. */
+  const uint16_t degPerComp = 720U / config.curveHalves;
+  uint16_t angle = calculateCurrentCrankAngle() + config.curveOffset;
+  while (angle >= degPerComp) { angle -= degPerComp; }
 
-  uint16_t compressionModifier = 0;
-  switch(config.compressionType)
-  {
-    case COMPRESSION_TYPE_2CYL_4STROKE:
-      modAngle = crankAngle / 2;
-      compressionModifier = pgm_read_byte(&sin_100_180[modAngle]);
-      break;
-    case COMPRESSION_TYPE_4CYL_4STROKE:
-      modAngle = (crankAngle % 180) ;
-      compressionModifier = pgm_read_byte(&sin_100_180[modAngle]);
-      break;
-    case COMPRESSION_TYPE_6CYL_4STROKE:
-      modAngle = crankAngle % 120;
-      compressionModifier = pgm_read_byte(&sin_100_120[modAngle]);
-      break;
-    case COMPRESSION_TYPE_8CYL_4STROKE:
-      modAngle = crankAngle % 90;
-      compressionModifier = pgm_read_byte(&sin_100_90[modAngle]);
-      break;
-    default:
-      modAngle = (crankAngle % 180) ;
-      compressionModifier = pgm_read_byte(&sin_100_180[modAngle]);
-      break;
-  }
+  const uint8_t idx = (uint8_t)(((uint32_t)angle * 256U) / degPerComp);
+  const int8_t  s   = (int8_t)pgm_read_byte(&crank_curve_sine[idx]);
 
-  //RPM scaler - Varies the amplitude of the compression modifier based on how far below the compression RPM point we are. Eg:
-  //If the compression RPM value is 400
-  //At 300rpm the amplitude will be 75%
-  //At 200rpm the amplitude will be 50%
-  //At 100rpm the amplitude will be 25% etc
-  //Base RPM must be below 650 to prevent overflow
-  if(config.compressionDynamic && (currentStatus.base_rpm < 655U) ) { compressionModifier = (compressionModifier * currentStatus.base_rpm) / config.compressionRPM; }
-  
-  return compressionModifier;
+  /* The centre of the swing is lifted so the wheel still completes the revolutions it was asked
+   * for — see crank_curve_mean_fix. Then the amplitude is a percentage of that centre, so the swing
+   * follows the speed instead of being a fixed number of rpm that means everything at 150 and
+   * nothing at 600. */
+  const uint16_t fix = pgm_read_word(&crank_curve_mean_fix[config.curveAmplitude / 5]);
+  const int32_t  mid = ((int32_t)currentStatus.base_rpm * (int32_t)fix) >> 8;
+  const int32_t  lift = mid - (int32_t)currentStatus.base_rpm;
+
+  return (int16_t)(lift + (mid * (int32_t)config.curveAmplitude * (int32_t)s) / (100L * 127L));
 }
 
+// WHERE THE WHEEL IS, FROM THE WHEEL AND NOT FROM THE CLOCK.
+//
+// This used to interpolate the angle from elapsed time against the last cycle's duration, which
+// assumes the speed is constant across the cycle. That was harmless while the speed WAS constant.
+// It is not harmless now: the curve modulates speed as a function of angle, so an angle derived from
+// time feeds its own output back into its input, and at any real amplitude the curve comes out
+// bent — wrong frequency at the fast end of the turn and wrong again at the slow end.
+//
+// The edge counter is the angle. It advances one entry per edge of a pattern whose span in degrees
+// the table states, so it is exact by construction and costs a multiply.
 uint16_t calculateCurrentCrankAngle()
 {
-  if(cycleDuration == 0) { return 0; }
-
-  uint32_t cycleTime = micros() - cycleStartTime;
-  if( Wheels[config.wheel].wheel_degrees == 720 ) { cycleTime = cycleTime * 2; } 
-  
-  uint16_t tmpCrankAngle = ((cycleTime * 360U) / cycleDuration);
-  tmpCrankAngle += config.compressionOffset;
-  while(tmpCrankAngle > 360) { tmpCrankAngle -= 360; }
-
-  return tmpCrankAngle;
+  const uint16_t edges = Wheels[config.wheel].wheel_max_edges;
+  if (edges == 0) { return 0; }
+  uint16_t angle = (uint16_t)(((uint32_t)edge_counter * Wheels[config.wheel].wheel_degrees) / edges);
+  while (angle >= 360U) { angle -= 360U; }   /* a 720 degree pattern is two turns of the crank */
+  return angle;
 }
+
+
 
 /*!
  * Validates the new user requested RPM and sets it if valid. 

@@ -21,10 +21,11 @@ void loadConfig()
     config.sweep_low_rpm = 1000;
     config.sweep_interval = 1000;
 
-    config.useCompression = false;
-    config.compressionType = COMPRESSION_TYPE_4CYL_4STROKE;
-    config.compressionRPM = 400;
-    config.compressionOffset = 0;
+    config.crankCurve = false;
+    config.curveHalves = 4;          /* a four: one compression every 180 degrees */
+    config.curveAmplitude = 0;
+    config.curveMaxRpm = 600;
+    config.curveOffset = 0;
 
     saveConfig();
   }
@@ -59,24 +60,28 @@ void loadConfig()
 
     if(config.sweep_low_rpm >= config.sweep_high_rpm) { config.sweep_low_rpm = config.sweep_high_rpm - 100; }
 
-    config.useCompression = EEPROM.read(EEPROM_USE_COMPRESSION);
-    config.compressionType = EEPROM.read(EEPROM_COMPRESSION_TYPE);
-    highByte = EEPROM.read(EEPROM_COMPRESSION_RPM);
-    lowByte = EEPROM.read(EEPROM_COMPRESSION_RPM+1);
-    config.compressionRPM = word(highByte, lowByte);
-    highByte = EEPROM.read(EEPROM_COMPRESSION_OFFSET);
-    lowByte = EEPROM.read(EEPROM_COMPRESSION_OFFSET+1);
-    config.compressionOffset = word(highByte, lowByte);
-    //config.compressionType = COMPRESSION_TYPE_6CYL_4STROKE;
+    config.crankCurve = EEPROM.read(EEPROM_CRANK_CURVE);
+    config.curveHalves = EEPROM.read(EEPROM_CURVE_HALVES);
+    config.curveAmplitude = EEPROM.read(EEPROM_CURVE_AMPLITUDE);
+    highByte = EEPROM.read(EEPROM_CURVE_MAX_RPM);
+    lowByte = EEPROM.read(EEPROM_CURVE_MAX_RPM+1);
+    config.curveMaxRpm = word(highByte, lowByte);
+    highByte = EEPROM.read(EEPROM_CURVE_OFFSET);
+    lowByte = EEPROM.read(EEPROM_CURVE_OFFSET+1);
+    config.curveOffset = word(highByte, lowByte);
+
 
     //Error checking
     if(config.wheel >= MAX_WHEELS) { config.wheel = 5; }
     if(config.mode >= MAX_MODES) { config.mode = FIXED_RPM; }
     if(currentStatus.rpm > 15000) { currentStatus.rpm = 4000; }
     if(currentStatus.base_rpm > 15000) { currentStatus.base_rpm = 4000; }
-    if(config.compressionType > COMPRESSION_TYPE_8CYL_4STROKE) { config.compressionType = COMPRESSION_TYPE_4CYL_4STROKE; }
-    if(config.compressionRPM > 1000) { config.compressionRPM = 400; }
-    if(config.compressionOffset > 359) { config.compressionOffset = 0; }
+    /* A fresh EEPROM reads 255 everywhere, so every one of these needs a sane landing place or the
+     * board comes up dividing by a nonsense period. */
+    if(config.curveHalves < 1 || config.curveHalves > 16) { config.curveHalves = 4; }
+    if(config.curveAmplitude > 90) { config.curveAmplitude = 0; }
+    if(config.curveMaxRpm > 2000) { config.curveMaxRpm = 600; }
+    if(config.curveOffset > 359) { config.curveOffset = 0; }
   }
 }
 
@@ -111,14 +116,15 @@ void saveConfig()
   EEPROM.update(EEPROM_SWEEP_RPM_INT, highByte);
   EEPROM.update(EEPROM_SWEEP_RPM_INT+1, lowByte);
 
-  EEPROM.update(EEPROM_USE_COMPRESSION, config.useCompression);
-  EEPROM.update(EEPROM_COMPRESSION_TYPE, config.compressionType);
-  highByte = highByte(config.compressionRPM);
-  lowByte = lowByte(config.compressionRPM);
-  EEPROM.update(EEPROM_COMPRESSION_RPM, highByte);
-  EEPROM.update(EEPROM_COMPRESSION_RPM+1, lowByte);
-  highByte = highByte(config.compressionOffset);
-  lowByte = lowByte(config.compressionOffset);
-  EEPROM.update(EEPROM_COMPRESSION_OFFSET, highByte);
-  EEPROM.update(EEPROM_COMPRESSION_OFFSET+1, lowByte);
+  EEPROM.update(EEPROM_CRANK_CURVE, config.crankCurve);
+  EEPROM.update(EEPROM_CURVE_HALVES, config.curveHalves);
+  EEPROM.update(EEPROM_CURVE_AMPLITUDE, config.curveAmplitude);
+  highByte = highByte(config.curveMaxRpm);
+  lowByte = lowByte(config.curveMaxRpm);
+  EEPROM.update(EEPROM_CURVE_MAX_RPM, highByte);
+  EEPROM.update(EEPROM_CURVE_MAX_RPM+1, lowByte);
+  highByte = highByte(config.curveOffset);
+  lowByte = lowByte(config.curveOffset);
+  EEPROM.update(EEPROM_CURVE_OFFSET, highByte);
+  EEPROM.update(EEPROM_CURVE_OFFSET+1, lowByte);
 }
