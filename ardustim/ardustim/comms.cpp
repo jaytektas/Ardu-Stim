@@ -77,7 +77,7 @@ void commandParser()
 
     case 'c': //Receive a full config buffer
       //uint8_t targetBytes = (sizeof(struct configTable)-1); //No byte is sent for the version
-      while(Serial.available() < (sizeof(struct configTable)-1) ) {} //Wait for all bytes
+      while(Serial.available() < (int)(sizeof(struct configTable)-1) ) {} //Wait for all bytes
       for(uint8_t x=1; x<(sizeof(struct configTable)); x++)
       {
         *((uint8_t *)pnt_Config + x) = Serial.read(); //Read each byte into the config table
@@ -266,7 +266,6 @@ uint16_t freeRam () {
 //! Inverts the polarity of the primary output signal
 void toggle_invert_primary_cb()
 {
-  extern uint8_t output_invert_mask;
   output_invert_mask ^= 0x01; /* Flip crank invert mask bit */
 
 }
@@ -274,7 +273,6 @@ void toggle_invert_primary_cb()
 //! Inverts the polarity of the secondary output signal
 void toggle_invert_secondary_cb()
 {
-  extern uint8_t output_invert_mask;
   output_invert_mask ^= 0x02; /* Flip cam invert mask bit */
 }
 
