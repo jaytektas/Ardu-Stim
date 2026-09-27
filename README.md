@@ -9,6 +9,28 @@
 ##### This is the Speeduino fork of the ardustim engine simulator.
 </div>
 
+## Changes in this fork (jaytek branch)
+
+This is the jaytek fork of Speeduino's Ardu-Stim, modified by Jason Roughley in 2026 for the jayecu
+bench. It is based on upstream `51f624a` (2025-02-23) and, like the original, is licensed under the
+GNU GPL version 3 or later (see `LICENSE`). The original copyright notices are unchanged.
+
+Changes from upstream:
+
+- **Correct rpm on every wheel.** The rpm scaler is computed from each wheel's own edge count and
+  degrees instead of being a hand-typed number per wheel; fourteen of the sixty-four hand-typed values
+  were wrong, so those wheels ran at the wrong speed while reporting the rpm asked for.
+- **`F` + rpm (u16, little-endian)** — run at a fixed rpm set over serial, overriding the pot.
+- **`H` / `h` + `0x5A`** — halt and resume the wheel. Halt stops the pattern generator entirely and
+  leaves the outputs at their idle level, so an ECU sees no teeth at all. The `0x5A` second byte stops a
+  stray byte being taken as a halt.
+- **Settings survive a reset.** Opening the serial port resets the board (DTR is wired to RESET), so the
+  wheel, rpm, sweep and crank-curve settings are saved to EEPROM whenever a command changes them.
+- **Crank curve: `V` (set) and `v` (report).** Models the speed swing of a cranking engine: amplitude
+  in percent, compressions per revolution (in halves), and an rpm above which the wheel runs steady.
+  The swing is centred on the requested rpm, and the mean is corrected so the wheel really completes
+  the rpm asked for.
+
 ## Ardu-Stim
 
 Ardustim is an engine simulator built on the Arduino platform. It produces simulated crank and cam signals that can be used for testing aftermarket ECUs as well as being a useful tool for the development of firmware for these. It supports a large number of simulated rtigger patterns as well as multiple options for output speed (Eg Using an external pot, a fixed value or a sweep range)
